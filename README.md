@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/arifkyi/smsblaster-detection-sdr/main/SDR%20Signal%20Hunt%20Over%20Cyber%20City.png" alt="smsblaster-detection-sdr" width="100%">
+  <img src="SDR%20Signal%20Hunt%20Over%20Cyber%20City.png" alt="smsblaster-detection-sdr" width="100%">
 </p>
 
 <p align="center">
