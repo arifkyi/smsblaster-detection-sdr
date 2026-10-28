@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/python-3.8%2B-blue?logo=python&logoColor=white" alt="python 3.8+">
   <img src="https://img.shields.io/badge/shell-bash-green?logo=gnubash&logoColor=white" alt="shell bash">
   <img src="https://img.shields.io/badge/platform-Linux-lightgrey" alt="platform Linux">
-  <img src="https://img.shields.io/badge/YouTube-Rifky%20The%20Cyber-red?logo=youtube&logoColor=white" alt="YouTube Rifky The Cyber">
+  <a href="https://www.youtube.com/@RifkyTheCyber"><img src="https://img.shields.io/badge/YouTube-Rifky%20The%20Cyber-red?logo=youtube&logoColor=white" alt="YouTube Rifky The Cyber"></a>
 </p>
 
 # smsblaster-detection-sdr
@@ -22,6 +22,14 @@ smart-plug siren on a critical alert.
 
 It is receive-only. It measures and decodes the downlink only. It never
 transmits.
+
+> **YouTube:** https://www.youtube.com/@RifkyTheCyber
+> **Video walkthrough:** https://www.youtube.com/@RifkyTheCyber  *(placeholder, will be replaced with the specific video link)*
+
+This is the SDR / over-the-air counterpart to
+[**smsblaster-detection-signaling**](https://github.com/arifkyi/smsblaster-detection-signaling),
+which detects the same threat from a rooted phone at the signaling layer. See
+*Limitations* below for how the two compare.
 
 ---
 
@@ -299,3 +307,34 @@ SIB1 stage-2 decode on the roadmap.
 SIB1 stage-2 decode for TAC / eNB-ID / PLMN, adjacent-EARFCN collapse to merge
 one carrier's side-locks into a single baseline entry, live two-radio split,
 watch-trap manual entries, and web auth.
+
+---
+
+## Disclaimer
+
+For research and defensive detection only. This tool is receive-only and never
+transmits. Running your own test cell (fake BTS) to exercise it, however, does
+transmit on licensed spectrum and is regulated. Do it cabled and attenuated
+(>= 30 dB) or in a shielded environment, on a test PLMN with your own SIMs. Only
+sweep and detect on spectrum you are authorised to receive. You are responsible
+for complying with local law.
+
+---
+
+## License
+
+MIT. Add a `LICENSE` file to the repo for the badge above to link to.
+
+---
+
+## Support
+
+If this is useful to you, you can support the work:
+
+**[Support on Ko-fi](https://ko-fi.com/rifkythecyber)**
+
+Or scan the QR code below:
+
+<img src="https://github.com/user-attachments/assets/a6529b25-06eb-4072-9077-6682aad0807a" alt="Donate" width="200">
+
+**YouTube:** https://www.youtube.com/@RifkyTheCyber
