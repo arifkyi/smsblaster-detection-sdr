@@ -361,10 +361,13 @@ SIB1 stage-2 decode on the roadmap.
 
 ## Roadmap
 
-2G/GSM engine (grgsm_scanner, which gives CID / LAC / MCC / MNC directly),
-SIB1 stage-2 decode for TAC / eNB-ID / PLMN, adjacent-EARFCN collapse to merge
-one carrier's side-locks into a single baseline entry, live two-radio split,
-watch-trap manual entries, and web auth.
+Global band set (add B20, B2, B4, B12, B13, B66, B71, B32 so the tool is
+usable worldwide, not only the current APAC-leaning plan), 2G/GSM engine
+(grgsm_scanner, which gives CID / LAC / MCC / MNC directly), SIB1 stage-2
+decode for TAC / eNB-ID / PLMN, adjacent-EARFCN collapse to merge one carrier's
+side-locks into a single baseline entry, an alert power floor to drop weak
+side-lock phantoms, live two-radio split, watch-trap manual entries, and
+web auth.
 
 ---
 
