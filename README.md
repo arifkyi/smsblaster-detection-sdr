@@ -88,12 +88,14 @@ frequency range).
 
 ### Antenna ports (B210 / LibreSDR)
 
-| Role | Device | Port |
-|---|---|---|
-| Detector (cell_search, RX only) | USRP | **RX2 A** |
-| Fake BTS (srsENB, TX) | LibreSDR | **TX/RX A** |
+| Role | Port |
+|---|---|
+| Detector (cell_search, RX only) | **RX2 A** |
+| Fake BTS (srsENB, TX) | **TX/RX A** |
 
-cell_search receives on channel A, default antenna RX2. Confirm by scanning a
+Either SDR can play either role (the shipped config uses the LibreSDR as
+detector and the USRP as the fake; swap `enabled` in `RADIOS` to reverse it).
+cell_search receives on channel A, default antenna RX2, confirm by scanning a
 known-strong cell and checking it is found. srsENB also opens an RX channel for
 uplink on RX2 A, but you do not need an antenna there for detection.
 
@@ -144,6 +146,15 @@ slow part (learn) once, up front, so the demo itself is instant.
 "gain_db": 45.0,           # dense-area value; raise in a quiet area
 "debounce_hits": 1,        # fire on the first detection (snappy)
 ```
+
+**Pick the detector radio in `RADIOS`.** Set the detector you are using to
+`enabled: True` and the other to `enabled: False`. For a **LibreSDR** detector,
+set its absolute FPGA path (`"fpga": "/path/usrp_b210_fpga.bin"`) and confirm
+the file exists with `ls -la <that path>`; if the `fpga=` arg gives trouble,
+leave `fpga` empty and set `"cwd"` to the folder holding the `.bin`. A **USRP**
+uses the stock image, so leave its `fpga` empty. The detector's RX antenna goes
+on **RX2 A** either way. The disabled entry is the fake (srsENB) and is not run
+by this tool.
 
 **2. Start and open the dashboard:**
 

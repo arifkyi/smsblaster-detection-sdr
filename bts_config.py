@@ -55,20 +55,21 @@ CONFIG = {
 
 RADIOS = [
     {
-        "name": "USRP-B210",
-        "serial": "8002791",        # your B210 (Zhixun-wireless). The video detector.
-        "fpga": "",                 # stock UHD image
+        "name": "LibreSDR",
+        "serial": "7430S68",        # LibreSDR_B210mini. THE DETECTOR.
+        # absolute path to the LibreSDR FPGA .bin on THIS box. Confirm it with:
+        #   ls -la /home/rifky/fpgalibre/usrp_b210_fpga.bin
+        "fpga": "/home/rifky/usrp_b210_fpga.bin",
         "rf_args_extra": "",
-        "cwd": "",
+        "cwd": "",                  # fallback: set to the fpga's dir and leave fpga ""
         "enabled": True,
     },
     {
-        "name": "LibreSDR",
-        "serial": "7430S68",        # LibreSDR_B210mini
-        # absolute path to the LibreSDR FPGA .bin on THIS box (differs from the Mac path):
-        "fpga": "/home/rifky/myfpga/usrp_b210_fpga.bin",
+        "name": "USRP-B210",
+        "serial": "8002791",        # B210 (Zhixun-wireless). Now the FAKE (srsENB), not run here.
+        "fpga": "",                 # stock UHD image
         "rf_args_extra": "",
         "cwd": "",
-        "enabled": False,           # enable only for two-radio use
+        "enabled": False,           # the detector is the LibreSDR above
     },
 ]
