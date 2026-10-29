@@ -63,8 +63,8 @@ RADIOS = [
         "name": "LibreSDR",
         "serial": "7430S68",        # LibreSDR_B210mini. THE DETECTOR.
         # absolute path to the LibreSDR FPGA .bin on THIS box. Confirm it with:
-        #   ls -la /home/rifky/fpgalibre/usrp_b210_fpga.bin
-        "fpga": "/home/rifky/fpgalibre/usrp_b210_fpga.bin",
+        #   ls -la /home/rifky/usrp_b210_fpga.bin
+        "fpga": "/home/rifky/usrp_b210_fpga.bin",
         "rf_args_extra": "",
         "cwd": "",                  # fallback: set to the fpga's dir and leave fpga ""
         "enabled": True,
