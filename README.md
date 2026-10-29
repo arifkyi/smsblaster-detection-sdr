@@ -132,6 +132,52 @@ appear and watch it alarm.
 
 ---
 
+## Quick test (real hardware, cell_search)
+
+The fast path to a live demo once srsRAN + UHD + the USRP are ready. Do the
+slow part (learn) once, up front, so the demo itself is instant.
+
+**1. Set these in `bts_config.py`:**
+
+```python
+"engine": "cell_search",   # real srsRAN on this box
+"gain_db": 45.0,           # dense-area value; raise in a quiet area
+"debounce_hits": 1,        # fire on the first detection (snappy)
+```
+
+**2. Start and open the dashboard:**
+
+```
+python3 bts_app.py
+```
+then `http://<this box IP>:8080`.
+
+**3. Secure the baseline (do this before recording).** Tick your band (e.g.
+B3), click **Learn baseline**, wait for "learn done". This writes
+`baseline_cells.json`. Monitor runs from that file without re-learning, so you
+only pay the learn time once. Back it up:
+
+```
+cp baseline_cells.json baseline_cells.json.bak
+```
+
+If overload shows (scans crawl, garbage PCIs, the same cell under two PCIs),
+lower `gain_db` and re-learn. See *Tuning* below.
+
+**4. Start monitor.** With `debounce_hits: 1` an anomaly fires on the first
+detection, no waiting.
+
+**5. Trigger a fake.** Bring up your own test cell (srsENB) on a chosen EARFCN.
+On a real EARFCN it must out-power the real cell to be decoded (overshadow); on
+an empty EARFCN it fires a clean CRIT / NEW, but is first caught by the
+discovery sweep, so lower `discovery_every_s` (e.g. 20) for a quick catch. See
+*Detecting a fake BTS*.
+
+**6. Suppress / re-trigger.** **Acknowledge** clears and re-arms (and resets the
+siren). Fake off then on for a fresh take.
+
+---
+
 ## Tuning for your environment
 
 The defaults shipped here (`gain_db` 45, `nof_frames` 20) were tuned on a dense
