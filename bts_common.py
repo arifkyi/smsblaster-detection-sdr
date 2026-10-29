@@ -159,6 +159,10 @@ DEFAULTS = {
     "overshadow_margin_db": 3.0,     # relative: within this of the real cell = strong
     "debounce_hits": 2,              # consecutive confirmations before an alert fires
     "debounce_window": 2,            # out of this many recent observations (N-of-M)
+    # MISSING is noisier than NEW/POWER: weak cells flicker out of a single
+    # narrow-window scan, so flagging one gone needs more consecutive misses.
+    # This keeps the fake CRIT snappy (debounce_hits) while MISSING stays calm.
+    "missing_hits": 3,               # a baseline cell must be absent this many cycles
     "discovery_every_s": 300,        # full-band discovery sweep cadence (seconds)
     "monitor_track_guard": 2,        # +/- EARFCN padding around a tracked cell's window
 

@@ -29,8 +29,13 @@ CONFIG = {
     # whatever PCI it uses. Raise overshadow_dbm toward 0 to make CRIT stricter.
     "overshadow_dbm": -30.0,
     "overshadow_margin_db": 3.0,
-    "debounce_hits": 2,
+    "debounce_hits": 1,
     "debounce_window": 2,
+    # MISSING is noisier than the fake-detection alerts: weak real cells flicker
+    # out of one narrow scan, so a baseline cell must be absent this many cycles
+    # before MISSING fires. Keeps the fake CRIT snappy (debounce_hits=1) while
+    # MISSING stays calm. Raise it if you still see MISSING flicker.
+    "missing_hits": 3,
     # Full-band discovery sweep cadence. Track windows (known cells) run every
     # cycle regardless; this only sets how often brand-new EARFCNs are hunted.
     #   ~20-30  snappy for a live demo (empty-band NEW caught within ~1 cycle)
@@ -59,7 +64,7 @@ RADIOS = [
         "serial": "7430S68",        # LibreSDR_B210mini. THE DETECTOR.
         # absolute path to the LibreSDR FPGA .bin on THIS box. Confirm it with:
         #   ls -la /home/rifky/fpgalibre/usrp_b210_fpga.bin
-        "fpga": "/home/rifky/usrp_b210_fpga.bin",
+        "fpga": "/home/rifky/fpgalibre/usrp_b210_fpga.bin",
         "rf_args_extra": "",
         "cwd": "",                  # fallback: set to the fpga's dir and leave fpga ""
         "enabled": True,

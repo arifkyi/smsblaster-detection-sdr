@@ -336,7 +336,9 @@ class Engine:
         self.siren_armed = bool(self.cfg.get("siren_armed"))
 
         # debounce bookkeeping: anomaly-key -> deque of recent hit booleans
-        self._obs = defaultdict(lambda: deque(maxlen=self.cfg["debounce_window"]))
+        _win = max(int(self.cfg["debounce_window"]),
+                   int(self.cfg.get("missing_hits", 3)))
+        self._obs = defaultdict(lambda: deque(maxlen=_win))
         self._active_anoms = {}                   # anomaly-key -> Anomaly id
         self._last_discovery = 0
         # cells discovered during monitoring get promoted to track windows so
@@ -688,13 +690,17 @@ class Engine:
 
     def _debounce_and_latch(self, hits):
         need = int(self.cfg["debounce_hits"])
+        need_missing = int(self.cfg.get("missing_hits", 3))
         fired_crit = False
         with self._lock:
             all_keys = set(self._obs.keys()) | set(hits.keys())
             for k in all_keys:
                 self._obs[k].append(k in hits)
                 recent = sum(1 for x in self._obs[k] if x)
-                if k in hits and recent >= need:
+                # MISSING needs more consecutive misses than NEW/POWER/PCI, so
+                # weak cells flickering for a cycle don't raise a false alarm.
+                threshold = need_missing if k[0] == "MISSING" else need
+                if k in hits and recent >= threshold:
                     atype, cell, detail, sev = hits[k]
                     aid = self._active_anoms.get(k)
                     if aid and aid in self.anomalies:

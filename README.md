@@ -302,6 +302,7 @@ plug on the same trusted LAN.
 | overshadow_dbm | -30 | absolute level at/above which an unexpected cell is CRIT |
 | overshadow_margin_db | 3 | within this of the real cell on that EARFCN is also CRIT |
 | debounce_hits / window | 2 / 2 | confirmations needed before an alarm fires (N-of-M) |
+| missing_hits | 3 | cycles a baseline cell must be absent before MISSING fires (kept higher than debounce_hits so weak-cell flicker is not a false alarm) |
 | discovery_every_s | 60 | full-band discovery cadence (lower for a snappy demo) |
 | monitor_track_guard | 2 | +/- EARFCN padding around each tracked cell |
 | scan_ranges | (unset) | optional per-band `{band: (start, end)}` sweep limit |
