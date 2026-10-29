@@ -136,8 +136,8 @@ appear and watch it alarm.
 
 ## Quick test (real hardware, cell_search)
 
-The fast path to a live demo once srsRAN + UHD + the USRP are ready. Do the
-slow part (learn) once, up front, so the demo itself is instant.
+The fast path to a live test once srsRAN + UHD + the SDR are ready. Do the
+slow part (learn) once, up front, so monitoring itself is instant.
 
 **1. Set these in `bts_config.py`:**
 
@@ -163,7 +163,7 @@ python3 bts_app.py
 ```
 then `http://<this box IP>:8080`.
 
-**3. Secure the baseline (do this before recording).** Tick your band (e.g.
+**3. Secure the baseline (do this once, up front).** Tick your band (e.g.
 B3), click **Learn baseline**, wait for "learn done". This writes
 `baseline_cells.json`. Monitor runs from that file without re-learning, so you
 only pay the learn time once. Back it up:
@@ -185,7 +185,7 @@ discovery sweep, so lower `discovery_every_s` (e.g. 20) for a quick catch. See
 *Detecting a fake BTS*.
 
 **6. Suppress / re-trigger.** **Acknowledge** clears and re-arms (and resets the
-siren). Fake off then on for a fresh take.
+siren). Fake off then on to trigger it again.
 
 ---
 
@@ -218,7 +218,7 @@ window. It applies to both learn and the discovery sweep.
 "scan_ranges": {3: (1300, 1500)},   # only EARFCN 1300-1500 on band 3
 ```
 
-Narrowing is the main dial for a fast demo: scan the slice around the cells you
+Narrowing is the main dial for a fast check: scan the slice around the cells you
 care about instead of the whole band. Leave it out (or empty) for full sweeps.
 
 ---
@@ -233,7 +233,7 @@ your detector antenna to be decoded and flagged. Two consequences:
   nothing). At a few metres, enough tx_gain and the overshadow margin is large
   and the CRIT is reliable; too small a margin (a few dB) and the lock flips
   between fake and real cycle to cycle, so detection is intermittent.
-- For a clean, repeatable demo, aim the fake at an **empty EARFCN** (one not in
+- For a clean, repeatable test, aim the fake at an **empty EARFCN** (one not in
   your baseline). With no real cell to fight, the fake decodes every cycle and
   fires a crisp CRIT / NEW.
 
@@ -249,7 +249,7 @@ authorised to transmit on.
   is the single action that both silences and re-arms.
 - After acknowledging, the same anomaly can fire fresh again. With the fake
   still transmitting it re-confirms over the debounce window and re-latches; for
-  a clean take, stop the fake, let the card clear, then start it again.
+  a clean re-trigger, stop the fake, let the card clear, then start it again.
 
 ---
 
@@ -275,16 +275,16 @@ SMSBLASTER_SEVERITY=CRIT ./siren_hook.sh   # fire (test)
 LAN-controlled (XOR cipher, local port 9999, no cloud); keep the detector and
 plug on the same trusted LAN.
 
-### Recording-day notes
+### Practical notes
 
 - The siren depends on the LAN. **Running the USRP on USB 3.0 emits noise
   around 2.4 GHz and can knock out 2.4 GHz WiFi on the same box**, which drops
   the plug link. Put the box on **wired ethernet** (or 5 GHz WiFi) for a stable
   siren.
-- Keep the siren **disarmed** during setup and rehearsals (full detection still
-  shows on screen), and arm only for the take. Acknowledge quickly to cut the
-  sound. A flashing light on the plug often films better than a continuous
-  blare.
+- Keep the siren **disarmed** while setting up and testing (full detection still
+  shows on screen), and arm it only when you want the physical alarm.
+  Acknowledge to cut the sound. A flashing light on the plug is a quieter
+  alternative to a continuous siren.
 
 ---
 
@@ -303,7 +303,7 @@ plug on the same trusted LAN.
 | overshadow_margin_db | 3 | within this of the real cell on that EARFCN is also CRIT |
 | debounce_hits / window | 2 / 2 | confirmations needed before an alarm fires (N-of-M) |
 | missing_hits | 3 | cycles a baseline cell must be absent before MISSING fires (kept higher than debounce_hits so weak-cell flicker is not a false alarm) |
-| discovery_every_s | 60 | full-band discovery cadence (lower for a snappy demo) |
+| discovery_every_s | 60 | full-band discovery cadence (lower for faster first catch on empty EARFCNs) |
 | monitor_track_guard | 2 | +/- EARFCN padding around each tracked cell |
 | scan_ranges | (unset) | optional per-band `{band: (start, end)}` sweep limit |
 | host / port | 0.0.0.0 / 8080 | LAN-reachable web server |
