@@ -544,6 +544,10 @@ class Engine:
                     cycle_cells += src.scan(band, on_progress=_prog)
 
             # ---- 3. diff + debounce + latch -------------------------------
+            # A Stop mid-cycle leaves a partial scan. Evaluating it would raise
+            # alerts (and fake MISSINGs) from incomplete data, so discard it.
+            if self._stopflag.is_set():
+                break
             self._evaluate(cycle_cells)
             self.live_cells = [r.to_dict() for r in self._dedupe(cycle_cells)]
             self.last_cycle_ts = _now_iso()
@@ -600,7 +604,7 @@ class Engine:
                       legit cell already known on that EARFCN
         """
         abs_floor = self.cfg.get("overshadow_dbm", -30.0)
-        margin = self.cfg.get("overshadow_margin_db", 3.0)
+        margin = self.cfg.get("overshadow_margin_db", 0.0)
         if rec.pss_dbm >= abs_floor:
             return True, "loud: %.1f >= %.1f dBm" % (rec.pss_dbm, abs_floor)
         if same_earfcn:
