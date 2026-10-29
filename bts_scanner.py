@@ -604,7 +604,7 @@ class Engine:
                       legit cell already known on that EARFCN
         """
         abs_floor = self.cfg.get("overshadow_dbm", -30.0)
-        margin = self.cfg.get("overshadow_margin_db", 0.0)
+        margin = self.cfg.get("overshadow_margin_db", 3.0)
         if rec.pss_dbm >= abs_floor:
             return True, "loud: %.1f >= %.1f dBm" % (rec.pss_dbm, abs_floor)
         if same_earfcn:
