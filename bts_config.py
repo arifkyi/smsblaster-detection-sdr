@@ -1,10 +1,10 @@
 """
 bts_config.py - machine profile. Edit this per box, then run bts_app.py.
 
-RADIOS is a list; the app spawns one worker per enabled radio. It ships with a
-single USRP B210 (the video detector). The LibreSDR entry is present but
-disabled - enable it only if you ever run two radios on one box (topology A),
-in which case both serials below keep them apart.
+RADIOS is a list of the SDRs on this box. Exactly one should be enabled: that
+radio is the detector. Here the LibreSDR is the detector and the USRP B210 entry
+is disabled (it runs the test cell on another machine). Swap the two `enabled`
+flags to use the B210 as the detector instead. The serials keep them apart.
 
 CONFIG overrides anything in bts_common.DEFAULTS.
 """
@@ -29,19 +29,24 @@ CONFIG = {
     # whatever PCI it uses. Raise overshadow_dbm toward 0 to make CRIT stricter.
     "overshadow_dbm": -30.0,
     "overshadow_margin_db": 3.0,
+    # CRIT floor: the 'overshadows real cell' check only escalates to CRIT at or
+    # above this level. Faint neighbours and side-lock ghosts on busy EARFCNs
+    # stay WARN. Set it between your loudest false CRIT and your fake's level.
+    "crit_floor_dbm": -47.0,
     "debounce_hits": 1,
     "debounce_window": 2,
-    # MISSING is noisier than the fake-detection alerts: weak real cells flicker
+    # MISSING is noisier than the fake-BTS alerts: weak real cells flicker
     # out of one narrow scan, so a baseline cell must be absent this many cycles
-    # before MISSING fires. Keeps the fake CRIT snappy (debounce_hits=1) while
+    # before MISSING fires. Keeps the fake-BTS CRIT snappy (debounce_hits=1) while
     # MISSING stays calm. Raise it if you still see MISSING flicker.
     "missing_hits": 3,
     # Full-band discovery sweep cadence. Track windows (known cells) run every
     # cycle regardless; this only sets how often brand-new EARFCNs are hunted.
-    #   ~20-30  snappy for a live demo (empty-band NEW caught within ~1 cycle)
-    #   60      responsive default
-    #   300+    calm for long unattended runs
-    "discovery_every_s": 60,
+    # Set it LONGER than one full sweep of your ticked bands (B3 at nof_frames 20
+    # takes ~12-13 min), or every cycle becomes a full sweep and known-cell
+    # tracking slows to one check per sweep.
+    #   1800    track cycles under a minute, full sweep every 30 min
+    "discovery_every_s": 1800,
     "monitor_track_guard": 2,
 
     # ---- web --------------------------------------------------------------
@@ -71,7 +76,7 @@ RADIOS = [
     },
     {
         "name": "USRP-B210",
-        "serial": "8002791",        # B210 (Zhixun-wireless). Now the FAKE (srsENB), not run here.
+        "serial": "8002791",        # B210 (Zhixun-wireless). Runs the test cell (srsENB) elsewhere.
         "fpga": "",                 # stock UHD image
         "rf_args_extra": "",
         "cwd": "",

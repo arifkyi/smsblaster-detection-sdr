@@ -72,7 +72,10 @@ real cell and trips CRIT regardless of the PCI it uses. A weak unexpected cell
 "Strong" means either loud in absolute terms (PSS at or above `overshadow_dbm`,
 good for an empty EARFCN with no real cell to compare against) or loud relative
 to the real cell on that EARFCN (within `overshadow_margin_db` of it, or
-louder). The siren fires only on **CRIT**.
+louder). The relative check also needs the cell to be at or above
+`crit_floor_dbm`, so faint neighbour cells and side-lock ghosts on busy EARFCNs
+stay WARN while a blaster, which has to be loud to capture phones, still goes
+CRIT. The siren fires only on **CRIT**.
 
 ---
 
@@ -145,7 +148,22 @@ slow part (learn) once, up front, so monitoring itself is instant.
 "engine": "cell_search",   # real srsRAN on this box
 "gain_db": 45.0,           # dense-area value; raise in a quiet area
 "debounce_hits": 1,        # fire on the first detection (snappy)
+"discovery_every_s": 1800, # full sweep every 30 min, fast track cycles between
+"crit_floor_dbm": -47.0,   # relative overshadow is CRIT only at/above this
 ```
+
+`discovery_every_s` must be **longer than one full sweep** of your ticked bands
+(B3 at `nof_frames` 20 takes about 12 to 13 minutes). Monitor runs two kinds of
+scan: a fast track scan of the EARFCNs around your baseline cells every cycle,
+and a slow full-band discovery sweep on this timer. If the timer is shorter than
+the sweep, every cycle becomes a full sweep and a fake on a known EARFCN is only
+caught once per sweep. At 1800, cycle 1 is a full sweep, then cycles take under
+a minute until the next sweep 30 minutes later.
+
+`crit_floor_dbm` sets the minimum PSS for the "overshadows real cell" check to
+raise CRIT. Place it between the loudest false CRIT you see from neighbour cells
+and the level your test cell reaches at the detector antenna (for example,
+neighbours at -50 to -55 dBm and a test cell at -41 dBm: -47 works).
 
 **Pick the detector radio in `RADIOS`.** Set the detector you are using to
 `enabled: True` and the other to `enabled: False`. For a **LibreSDR** detector,
@@ -176,13 +194,14 @@ If overload shows (scans crawl, garbage PCIs, the same cell under two PCIs),
 lower `gain_db` and re-learn. See *Tuning* below.
 
 **4. Start monitor.** With `debounce_hits: 1` an anomaly fires on the first
-detection, no waiting.
+detection, no waiting. Alerts appear at the end of each cycle, so the first
+results come after cycle 1's full sweep; later cycles are fast.
 
 **5. Trigger a fake.** Bring up your own test cell (srsENB) on a chosen EARFCN.
 On a real EARFCN it must out-power the real cell to be decoded (overshadow); on
-an empty EARFCN it fires a clean CRIT / NEW, but is first caught by the
-discovery sweep, so lower `discovery_every_s` (e.g. 20) for a quick catch. See
-*Detecting a fake BTS*.
+an empty EARFCN it fires a clean CRIT / NEW, but only the discovery sweep finds
+it, so it is caught within one `discovery_every_s` interval. Once found it is
+tracked every cycle. See *Detecting a fake BTS*.
 
 **6. Suppress / re-trigger.** **Acknowledge** clears and re-arms (and resets the
 siren). Fake off then on to trigger it again.
@@ -301,9 +320,10 @@ plug on the same trusted LAN.
 | power_delta_db | 6 | PSS rise over baseline (known cell) that counts as a spike |
 | overshadow_dbm | -30 | absolute level at/above which an unexpected cell is CRIT |
 | overshadow_margin_db | 3 | within this of the real cell on that EARFCN is also CRIT |
+| crit_floor_dbm | -47 | the relative (within-margin) CRIT also needs PSS at/above this; weaker stays WARN |
 | debounce_hits / window | 2 / 2 | confirmations needed before an alarm fires (N-of-M) |
 | missing_hits | 3 | cycles a baseline cell must be absent before MISSING fires (kept higher than debounce_hits so weak-cell flicker is not a false alarm) |
-| discovery_every_s | 60 | full-band discovery cadence (lower for faster first catch on empty EARFCNs) |
+| discovery_every_s | 1800 | seconds between full-band discovery sweeps; keep it longer than one sweep so track cycles stay fast |
 | monitor_track_guard | 2 | +/- EARFCN padding around each tracked cell |
 | scan_ranges | (unset) | optional per-band `{band: (start, end)}` sweep limit |
 | host / port | 0.0.0.0 / 8080 | LAN-reachable web server |

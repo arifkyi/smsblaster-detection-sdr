@@ -144,7 +144,7 @@ class SimSource(ScanSource):
     TRUTH = {
         3:  [(1313, 108, 100, 2, -36.0), (1850, 275, 100, 4, -41.0)],
         1:  [(74, 2, 15, 1, -27.0), (300, 150, 50, 2, -22.0)],
-        8:  [],   # empty band, like Rifky's real Band 8
+        8:  [],   # empty band (no cells)
         40: [(38752, 2, 25, 1, -17.0), (38843, 0, 100, 4, -26.0)],
         5:  [(2500, 60, 50, 2, -30.0)],
     }
@@ -545,7 +545,7 @@ class Engine:
 
             # ---- 3. diff + debounce + latch -------------------------------
             # A Stop mid-cycle leaves a partial scan. Evaluating it would raise
-            # alerts (and fake MISSINGs) from incomplete data, so discard it.
+            # alerts (and false MISSINGs) from incomplete data, so discard it.
             if self._stopflag.is_set():
                 break
             self._evaluate(cycle_cells)
@@ -601,17 +601,23 @@ class Engine:
         (bool, reason_str). Two tests, either triggers:
           - absolute: PSS >= overshadow_dbm (loud anywhere, e.g. an empty EARFCN)
           - relative: PSS within overshadow_margin_db of, or above, the loudest
-                      legit cell already known on that EARFCN
+                      legit cell already known on that EARFCN, AND at or above
+                      crit_floor_dbm. The floor stops faint neighbour cells and
+                      side-lock ghosts on busy EARFCNs from raising CRIT.
         """
         abs_floor = self.cfg.get("overshadow_dbm", -30.0)
         margin = self.cfg.get("overshadow_margin_db", 3.0)
+        crit_floor = self.cfg.get("crit_floor_dbm", -47.0)
         if rec.pss_dbm >= abs_floor:
             return True, "loud: %.1f >= %.1f dBm" % (rec.pss_dbm, abs_floor)
         if same_earfcn:
             ref = max(b.pss_mean for b in same_earfcn)
             if rec.pss_dbm >= ref - margin:
-                return True, "overshadows real cell (%.1f vs %.1f dBm)" % (
-                    rec.pss_dbm, ref)
+                if rec.pss_dbm >= crit_floor:
+                    return True, "overshadows real cell (%.1f vs %.1f dBm)" % (
+                        rec.pss_dbm, ref)
+                return False, "near real cell but below floor (%.1f < %.1f dBm)" % (
+                    rec.pss_dbm, crit_floor)
         return False, "weak %.1f dBm" % rec.pss_dbm
 
     def _evaluate(self, cycle_cells):
