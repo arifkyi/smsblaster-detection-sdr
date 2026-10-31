@@ -1,0 +1,35 @@
+# ---- Baselines: specific to each site and antenna position, never shared ----
+baseline_cells.json
+baseline_cells.json.tmp
+baseline_good.json
+baseline*.json
+*.json.tmp
+.old/
+
+# ---- Siren runtime state ----
+smsblaster_siren.latch
+*.latch
+
+# ---- FPGA images (device-specific, download separately) ----
+*.bin
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+
+# ---- Virtual environments ----
+flaskenv/
+venv/
+.venv/
+env/
+
+# ---- Logs and run output ----
+*.log
+nohup.out
+
+# ---- Editors and OS ----
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*~
