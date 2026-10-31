@@ -47,6 +47,10 @@ CONFIG = {
     # tracking slows to one check per sweep.
     #   1800    track cycles under a minute, full sweep every 30 min
     "discovery_every_s": 1800,
+    # Discovery on/off (GUI toggle default). Off = track scans only: every cycle,
+    # including the first, is fast, but a fake on an EARFCN not in the baseline
+    # (an empty one, or an operator carrier the learn missed) is never seen.
+    "discovery_enabled": True,
     "monitor_track_guard": 2,
 
     # ---- web --------------------------------------------------------------

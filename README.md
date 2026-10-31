@@ -160,6 +160,13 @@ the sweep, every cycle becomes a full sweep and a fake on a known EARFCN is only
 caught once per sweep. At 1800, cycle 1 is a full sweep, then cycles take under
 a minute until the next sweep 30 minutes later.
 
+The **Discovery sweep** toggle on the dashboard (default from
+`discovery_enabled`) turns the sweep off entirely. Every cycle, including the
+first, is then a fast track scan. The trade-off: a fake on an EARFCN outside
+your baseline (an empty one, or an operator carrier the learn missed) is never
+seen. Leave it on unless your baseline covers every operator EARFCN at the site;
+use baseline-fill to add weak carriers the learn missed.
+
 `crit_floor_dbm` sets the minimum PSS for the "overshadows real cell" check to
 raise CRIT. Place it between the loudest false CRIT you see from neighbour cells
 and the level your test cell reaches at the detector antenna (for example,
@@ -323,6 +330,7 @@ plug on the same trusted LAN.
 | crit_floor_dbm | -47 | the relative (within-margin) CRIT also needs PSS at/above this; weaker stays WARN |
 | debounce_hits / window | 2 / 2 | confirmations needed before an alarm fires (N-of-M) |
 | missing_hits | 3 | cycles a baseline cell must be absent before MISSING fires (kept higher than debounce_hits so weak-cell flicker is not a false alarm) |
+| discovery_enabled | true | discovery sweep on/off (GUI toggle default); off = track scans only |
 | discovery_every_s | 1800 | seconds between full-band discovery sweeps; keep it longer than one sweep so track cycles stay fast |
 | monitor_track_guard | 2 | +/- EARFCN padding around each tracked cell |
 | scan_ranges | (unset) | optional per-band `{band: (start, end)}` sweep limit |

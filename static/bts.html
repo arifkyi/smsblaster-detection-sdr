@@ -68,6 +68,7 @@
   .toggle.on .sw{background:var(--crit);border-color:var(--crit)}
   .toggle.on .sw::after{left:20px;background:#fff}
   .toggle.disabled{opacity:.4;cursor:not-allowed}
+  .toggle.calm.on .sw{background:var(--phos);border-color:var(--phos)}
   input[type=number],select{font-family:var(--mono);font-size:12.5px;
     background:var(--bg);border:1px solid var(--border);color:var(--ink);
     border-radius:5px;padding:6px 8px;width:92px}
@@ -192,6 +193,10 @@
         <span class="ctl-label">Siren</span>
         <div class="toggle" id="siren"><div class="sw"></div><span id="siren-txt">disarmed</span></div>
       </div>
+      <div class="ctl-group">
+        <span class="ctl-label">Discovery sweep</span>
+        <div class="toggle calm" id="disc"><div class="sw"></div><span id="disc-txt">on</span></div>
+      </div>
     </div>
   </div>
 
@@ -308,6 +313,7 @@ $('#btn-stop').onclick=()=>post('/stop');
 $('#btn-ackall').onclick=()=>post('/ack',{id:'all'});
 $('#siren').onclick=function(){ if(this.classList.contains('disabled'))return;
   post('/siren',{armed:!this.classList.contains('on')}); };
+$('#disc').onclick=function(){ post('/discovery',{enabled:!this.classList.contains('on')}); };
 $('#btn-manual').onclick=()=>{
   const g=id=>{const v=$(id).value.trim();return v===''?null:v;};
   post('/manual',{band:g('#m-band'),earfcn:g('#m-earfcn'),phyid:g('#m-phyid'),
@@ -339,6 +345,10 @@ function render(st){
   sg.classList.toggle('on',st.siren_armed);
   $('#siren-txt').textContent = !st.siren_configured ? 'no hook configured'
     : (st.siren_armed?'ARMED':'disarmed');
+
+  // discovery toggle
+  $('#disc').classList.toggle('on',!!st.discovery_enabled);
+  $('#disc-txt').textContent = st.discovery_enabled ? 'on' : 'off (track only)';
 
   // progress
   const p=st.progress||{};

@@ -13,6 +13,7 @@ Endpoints:
   POST /monitor          {bands:[...]}        start monitor mode (uses saved baseline)
   POST /stop             stop current job
   POST /siren            {armed:bool}         arm/disarm the siren hook
+  POST /discovery        {enabled:bool}       discovery sweep on/off (off = track only)
   POST /ack              {id:<n>|"all"}       acknowledge/clear an anomaly (+siren reset)
   POST /manual           {earfcn,phyid,band,prb?,ports?,pss_dbm?}  baseline-fill
   POST /inject           {band,earfcn,phyid,prb?,ports?,dbm?}  sim-only fake BTS
@@ -95,6 +96,13 @@ def siren():
     data = request.get_json(force=True, silent=True) or {}
     engine.arm_siren(bool(data.get("armed")))
     return jsonify({"ok": True, "armed": engine.siren_armed})
+
+
+@app.route("/discovery", methods=["POST"])
+def discovery():
+    data = request.get_json(force=True, silent=True) or {}
+    engine.set_discovery(bool(data.get("enabled")))
+    return jsonify({"ok": True, "enabled": engine.discovery_enabled})
 
 
 @app.route("/ack", methods=["POST"])

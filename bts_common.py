@@ -164,6 +164,7 @@ DEFAULTS = {
     # narrow-window scan, so flagging one gone needs more consecutive misses.
     # This keeps the fake-BTS CRIT snappy (debounce_hits) while MISSING stays calm.
     "missing_hits": 3,               # a baseline cell must be absent this many cycles
+    "discovery_enabled": True,       # full-band discovery sweep on/off (GUI toggle)
     "discovery_every_s": 300,        # full-band discovery sweep cadence (seconds)
     "monitor_track_guard": 2,        # +/- EARFCN padding around a tracked cell's window
 

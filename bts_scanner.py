@@ -334,6 +334,10 @@ class Engine:
         self.cycle = 0
         self.last_cycle_ts = None
         self.siren_armed = bool(self.cfg.get("siren_armed"))
+        # Discovery sweep on/off. Off = track scans only (baseline EARFCNs +/-
+        # guard): fast cycles, but a fake on an EARFCN outside the baseline is
+        # never seen. Switchable live from the GUI.
+        self.discovery_enabled = bool(self.cfg.get("discovery_enabled", True))
 
         # debounce bookkeeping: anomaly-key -> deque of recent hit booleans
         _win = max(int(self.cfg["debounce_window"]),
@@ -400,6 +404,9 @@ class Engine:
 
     def arm_siren(self, on):
         self.siren_armed = bool(on)
+
+    def set_discovery(self, on):
+        self.discovery_enabled = bool(on)
 
     def ack(self, anom_id):
         with self._lock:
@@ -514,6 +521,14 @@ class Engine:
             # ---- 1. track windows: narrow scan per known baseline cell ----
             #        plus any cell discovered earlier (promoted to tracked).
             windows = self._track_windows(guard)
+            if not windows and not self.discovery_enabled:
+                self.status_line = ("discovery off and nothing to track - "
+                                    "learn a baseline or turn discovery on")
+                for _ in range(10):
+                    if self._stopflag.is_set():
+                        break
+                    time.sleep(0.1)
+                continue
             for (band, lo, hi) in windows:
                 if self._stopflag.is_set():
                     break
@@ -529,7 +544,8 @@ class Engine:
 
             # ---- 2. discovery sweep: full ticked bands, on a slower timer --
             now = time.time()
-            if now - self._last_discovery >= self.cfg["discovery_every_s"]:
+            if (self.discovery_enabled and
+                    now - self._last_discovery >= self.cfg["discovery_every_s"]):
                 self._last_discovery = now
                 for band in bands:
                     if self._stopflag.is_set():
@@ -770,6 +786,7 @@ class Engine:
                 "progress": dict(self.progress),
                 "siren_armed": self.siren_armed,
                 "siren_configured": bool(self.cfg.get("alert_cmd")),
+                "discovery_enabled": self.discovery_enabled,
                 "engine": self.cfg["engine"],
                 "gain_db": self.cfg["gain_db"],
                 "baseline_meta": self.baseline.meta,
