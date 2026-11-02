@@ -845,7 +845,18 @@ class Engine:
                     atype, cell, detail, sev = hits[k]
                     aid = self._active_anoms.get(k)
                     if aid and aid in self.anomalies:
-                        self.anomalies[aid].bump(cell, detail)
+                        old = self.anomalies[aid]
+                        old.bump(cell, detail)
+                        # A cell first seen weak (WARN) that later comes in
+                        # strong must escalate. Without this, an early weak
+                        # sighting of a blaster would block its CRIT and siren.
+                        if sev == C.SEV_CRIT and old.severity != C.SEV_CRIT:
+                            old.severity = C.SEV_CRIT
+                            fired_crit = True
+                            self.log.event("%s %-7s EARFCN=%s PCI=%s PSS=%s  escalated from WARN: %s" % (
+                                sev, atype, old.earfcn, old.phyid,
+                                "%.1f dBm" % old.pss_dbm if old.pss_dbm is not None else "-",
+                                detail))
                     else:
                         a = Anomaly(atype, cell, detail, sev)
                         self.anomalies[a.id] = a
