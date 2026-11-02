@@ -191,6 +191,13 @@ class SimSource(ScanSource):
             if on_progress:
                 on_progress(i, total, ea, C.earfcn_to_freq_mhz(band, ea) or 0.0)
             time.sleep(0.004)
+        # A narrow track window on real hardware costs a few seconds (radio
+        # open + dwell). Mimic that so sim cycles run at a realistic pace.
+        if span <= 10:
+            for _ in range(15):
+                if self._stop:
+                    break
+                time.sleep(0.1)
 
         cells = []
         in_range = lambda e: lo <= e <= hi
@@ -215,12 +222,14 @@ class SimSource(ScanSource):
             # implausible PRB -> dropped by filter, same as real 150-PRB garbage
             pass  # intentionally not added: it would be filtered; we model the
                   # *flicker* via unstable PCI below instead
-        if random.random() < 0.25:
+        if random.random() < 0.03:     # occasional, like real side-locks
             ghost_ea = random.randint(lo, hi)
             cells.append(CellRecord(ghost_ea, random.randint(0, 503), band,
                                     C.earfcn_to_freq_mhz(band, ghost_ea),
                                     random.choice([6, 15]), 1,
-                                    round(random.uniform(-30, -24), 1)))
+                                    # weak, like real side-locks (-48..-59 seen
+                                    # on hardware): at most a WARN, never CRIT
+                                    round(random.uniform(-60, -52), 1)))
         return cells
 
     def stop(self):
