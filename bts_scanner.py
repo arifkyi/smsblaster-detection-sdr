@@ -17,6 +17,7 @@ Receive-only. cell_search measures and decodes the downlink; nothing transmits.
 import json
 import os
 import re
+import shlex
 import subprocess
 import threading
 import time
@@ -81,6 +82,10 @@ class CellSearchSource(ScanSource):
     def scan(self, band, earfcn_start=None, earfcn_end=None, on_progress=None):
         self._stop = False
         args = self._build_args(band, earfcn_start, earfcn_end)
+        log = getattr(self, "log", None)
+        t0 = time.time()
+        if log:
+            log.scan("RUN  " + " ".join(shlex.quote(a) for a in args))
         cwd = self.radio.get("cwd") or None
         cells = []
         in_summary = False
@@ -111,7 +116,11 @@ class CellSearchSource(ScanSource):
             cell = C.parse_found_cell(line)
             if cell:
                 b = C.band_for_earfcn(cell["earfcn"]) or band
-                if C.is_plausible_cell(cell["earfcn"], cell["phyid"], cell["prb"], cell["ports"]):
+                ok = C.is_plausible_cell(cell["earfcn"], cell["phyid"],
+                                         cell["prb"], cell["ports"])
+                if log:
+                    log.scan(("CELL " if ok else "DROP ") + _fmt_cell(cell))
+                if ok:
                     cells.append(CellRecord(
                         earfcn=cell["earfcn"], phyid=cell["phyid"], band=b,
                         freq_mhz=cell["freq_mhz"], prb=cell["prb"],
@@ -127,8 +136,14 @@ class CellSearchSource(ScanSource):
         # scanned (radio busy, unplugged, FPGA load failure). Raise instead of
         # returning [], so a dead radio can never look like "all cells missing".
         if not progressed and not self._stop:
-            raise RuntimeError("radio error, cell_search did not scan: %s"
-                               % (" | ".join(tail) or "no output"))
+            msg = "radio error, cell_search did not scan: %s" % (
+                " | ".join(tail) or "no output")
+            if log:
+                log.scan("END  ERROR " + msg)
+            raise RuntimeError(msg)
+        if log:
+            log.scan("END  %d cells, %.1f s%s" % (
+                len(cells), time.time() - t0, " (stopped)" if self._stop else ""))
         return cells
 
     def stop(self):
@@ -138,6 +153,48 @@ class CellSearchSource(ScanSource):
                 self._proc.terminate()
             except Exception:
                 pass
+
+
+class RunLog:
+    """
+    Optional plain-text logs (enabled with `python bts_app.py --log` or
+    log_enabled=True). Two daily files in ./logs next to this script:
+      cellsearch_YYYY-MM-DD.log  every cell_search run: RUN / CELL / DROP / END
+      anomalies_YYYY-MM-DD.log   START / STOP / CRIT / WARN / ACK / SIREN / ERROR
+    Disabled = every call is a no-op.
+    """
+
+    def __init__(self, enabled, folder=None):
+        self.enabled = bool(enabled)
+        self.folder = folder or os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "logs")
+        self._lock = threading.Lock()
+        if self.enabled:
+            os.makedirs(self.folder, exist_ok=True)
+
+    def _write(self, kind, text):
+        if not self.enabled:
+            return
+        now = time.localtime()
+        path = os.path.join(self.folder, "%s_%s.log" % (
+            kind, time.strftime("%Y-%m-%d", now)))
+        line = "%s %s\n" % (time.strftime("%Y-%m-%d %H:%M:%S", now), text)
+        try:
+            with self._lock, open(path, "a") as f:
+                f.write(line)
+        except OSError:
+            pass   # logging must never stop detection
+
+    def scan(self, text):
+        self._write("cellsearch", text)
+
+    def event(self, text):
+        self._write("anomalies", text)
+
+
+def _fmt_cell(c):
+    return "EARFCN=%d PHYID=%-3d %3d PRB %d ports PSS=%.1f dBm" % (
+        c["earfcn"], c["phyid"], c["prb"], c["ports"], c["pss_dbm"])
 
 
 class SimSource(ScanSource):
@@ -365,6 +422,7 @@ class Engine:
         # guard): fast cycles, but a fake on an EARFCN outside the baseline is
         # never seen. Switchable live from the GUI.
         self.discovery_enabled = bool(self.cfg.get("discovery_enabled", True))
+        self.log = RunLog(self.cfg.get("log_enabled", False))
 
         # debounce bookkeeping: anomaly-key -> deque of recent hit booleans
         _win = max(int(self.cfg["debounce_window"]),
@@ -391,6 +449,7 @@ class Engine:
 
     def _source_for(self, radio):
         src = make_source(radio, self.cfg)
+        src.log = self.log
         self._active_src = src      # so Stop can terminate an in-flight scan
         if isinstance(src, SimSource):
             self._sim = src
@@ -433,17 +492,22 @@ class Engine:
             except Exception as e:
                 self.status_line = "ERROR: %s" % e
                 self.mode = "idle"
+                self.log.event("ERROR %s" % e)
         return wrapped
 
     def arm_siren(self, on):
         self.siren_armed = bool(on)
+        self.log.event("SIREN %s" % ("armed" if on else "disarmed"))
 
     def set_discovery(self, on):
         self.discovery_enabled = bool(on)
+        self.log.event("DISCOVERY %s" % ("on" if on else "off (track only)"))
 
     def ack(self, anom_id):
         with self._lock:
             if anom_id == "all":
+                n = sum(1 for a in self.anomalies.values() if not a.acked)
+                self.log.event("ACK  all, %d alerts" % n)
                 for a in self.anomalies.values():
                     a.acked = True
                 self._active_anoms.clear()
@@ -452,6 +516,8 @@ class Engine:
                 a = self.anomalies.get(int(anom_id))
                 if a:
                     a.acked = True
+                    self.log.event("ACK  %s %s EARFCN=%s PCI=%s" % (
+                        a.severity, a.atype, a.earfcn, a.phyid))
                     # drop it from active tracking so it can re-fire later
                     for k, aid in list(self._active_anoms.items()):
                         if aid == a.id:
@@ -462,11 +528,15 @@ class Engine:
     def inject_fake_bts(self, band, earfcn, phyid, prb=6, ports=1, dbm=-20.0):
         """Sim only: make a strong NEW cell appear, to exercise detection."""
         self._injections.append((band, earfcn, phyid, prb, ports, dbm))
+        self.log.event("INJECT sim fake B%d EARFCN=%d PCI=%d %.0f dBm" % (
+            band, earfcn, phyid, dbm))
         if self._sim is not None:
             self._sim.inject_fake_bts(band, earfcn, phyid, prb, ports, dbm)
         return True
 
     def clear_fake_bts(self):
+        if self._injections:
+            self.log.event("INJECT cleared")
         self._injections = []
         if self._sim:
             self._sim.clear_injections()
@@ -477,6 +547,8 @@ class Engine:
         N = int(self.cfg["learn_min_seen"])
         radio = self._primary_radio()
         src = self._source_for(radio)
+        self.log.event("START learn, engine=%s, bands=%s, gain %s, %d of %d passes" % (
+            self.cfg["engine"], ",".join(map(str, bands)), self.cfg["gain_db"], N, M))
 
         # accumulate per (earfcn, phyid): list of CellRecord across passes
         seen = defaultdict(list)
@@ -533,6 +605,7 @@ class Engine:
 
         self.status_line = "learn done: %d cells in baseline (gain %.0f dB)" % (
             len(promoted), self.cfg["gain_db"])
+        self.log.event("STOP learn: %s" % self.status_line)
         self.mode = "idle"
 
     # ----- monitor --------------------------------------------------------
@@ -544,6 +617,14 @@ class Engine:
         radio = self._primary_radio()
         src = self._source_for(radio)
         guard = int(self.cfg["monitor_track_guard"])
+        self.log.event(
+            "START monitor, engine=%s, bands=%s, baseline=%s (%d cells), gain %s, "
+            "discovery %s, floor %s, margin %s" % (
+                self.cfg["engine"], ",".join(map(str, bands)) or "-",
+                self.baseline.meta.get("created", "?"), len(self.baseline.cells),
+                self.cfg["gain_db"], "on" if self.discovery_enabled else "off",
+                self.cfg.get("crit_floor_dbm"), self.cfg.get("overshadow_margin_db")))
+        cycle0 = self.cycle
         self._last_discovery = 0
         self._dynamic_tracks = {}
 
@@ -609,6 +690,7 @@ class Engine:
                     break
                 time.sleep(0.1)
 
+        self.log.event("STOP monitor, %d cycles" % (self.cycle - cycle0))
         self.mode = "idle"
 
     def _track_windows(self, guard):
@@ -768,6 +850,10 @@ class Engine:
                         a = Anomaly(atype, cell, detail, sev)
                         self.anomalies[a.id] = a
                         self._active_anoms[k] = a.id
+                        self.log.event("%s %-7s EARFCN=%s PCI=%s PSS=%s  %s" % (
+                            sev, atype, a.earfcn, a.phyid,
+                            "%.1f dBm" % a.pss_dbm if a.pss_dbm is not None else "-",
+                            detail))
                         if sev == C.SEV_CRIT:
                             fired_crit = True
         if fired_crit:
@@ -787,6 +873,7 @@ class Engine:
             return
         env = dict(os.environ)
         env["SMSBLASTER_SEVERITY"] = "CRIT"
+        self.log.event("SIREN fire")
         try:
             # fire-and-forget: never block or crash the detector on a dead plug
             subprocess.Popen([cmd], env=env,
@@ -800,6 +887,8 @@ class Engine:
         if not cmd:
             return
         if not self._crit_unacked():
+            if self.siren_armed:
+                self.log.event("SIREN reset")
             try:
                 subprocess.Popen([cmd, "--reset"],
                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -820,6 +909,10 @@ class Engine:
                 "siren_armed": self.siren_armed,
                 "siren_configured": bool(self.cfg.get("alert_cmd")),
                 "discovery_enabled": self.discovery_enabled,
+                "log_enabled": self.log.enabled,
+                "injections": [
+                    {"band": b, "earfcn": e, "phyid": p, "prb": r, "dbm": d}
+                    for (b, e, p, r, _ports, d) in self._injections],
                 "engine": self.cfg["engine"],
                 "gain_db": self.cfg["gain_db"],
                 "baseline_meta": self.baseline.meta,

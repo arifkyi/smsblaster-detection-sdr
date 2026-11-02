@@ -133,7 +133,12 @@ you want a fresh reference.
 Set `engine` to `sim`. It synthesizes cells (stable ones plus decode noise) so
 you can exercise the whole pipeline and the UI with no radio. In sim mode the
 dashboard shows a **Sim test - inject fake BTS** panel to make a strong cell
-appear and watch it alarm.
+appear and watch it alarm. It defaults to a same-EARFCN fake on one of the sim's
+baseline cells (B3 1700, PCI 1), so the next track scan raises CRIT within
+seconds, mid-monitor. A fake on an EARFCN outside the baseline (e.g. an empty
+band) is only found by the discovery sweep, so inject it before Start monitor
+with that band ticked and discovery on. The **Active fakes** line shows what is
+injected; **Clear** removes it.
 
 The sim keeps its own baseline in `baseline_sim.json`, separate from the
 real-hardware `baseline_cells.json`. Switching `engine` back and forth never
@@ -283,6 +288,44 @@ authorised to transmit on.
 
 ---
 
+## Logs (optional)
+
+Off by default. Turn it on for a run with:
+
+```
+python3 bts_app.py --log
+```
+
+or set `"log_enabled": True` in `bts_config.py`. A **log on** chip appears in the
+dashboard header while it is active. Two daily files are written to `logs/`:
+
+`cellsearch_YYYY-MM-DD.log`, every cell_search run and exactly what it returned
+(rows the PRB filter rejected are marked `DROP`):
+
+```
+2026-11-02 15:26:41 RUN  /usr/src/.../cell_search -b 3 -s 1311 -e 1315 -g 45 -n 20 -a serial=...,fpga=...
+2026-11-02 15:26:48 CELL EARFCN=1313 PHYID=123 100 PRB 4 ports PSS=-46.1 dBm
+2026-11-02 15:26:48 CELL EARFCN=1313 PHYID=1    50 PRB 1 ports PSS=-44.7 dBm
+2026-11-02 15:26:48 END  2 cells, 7.2 s
+```
+
+`anomalies_YYYY-MM-DD.log`, what the detector concluded and what you did:
+
+```
+2026-11-02 15:16:40 START monitor, engine=cell_search, bands=3, baseline=... (6 cells), gain 45, discovery off, floor -47, margin 3
+2026-11-02 15:21:02 CRIT PCI     EARFCN=1313 PCI=1 PSS=-44.7 dBm  EARFCN 1313 expected PHYID 123, saw 1 [overshadows real cell ...]
+2026-11-02 15:21:02 SIREN fire
+2026-11-02 15:24:10 ACK  all, 4 alerts
+2026-11-02 15:31:50 STOP monitor, 7 cycles
+```
+
+Useful commands: `tail -f logs/anomalies_*.log`, `grep CRIT logs/anomalies_*.log`,
+`grep EARFCN=1313 logs/cellsearch_*.log`. Logs contain your radio serial, paths
+and the EARFCNs around you; review them before sharing. `logs/` is git-ignored.
+Sim mode writes only the anomalies log.
+
+---
+
 ## Siren (optional)
 
 Point `alert_cmd` in `bts_config.py` at the absolute path of `siren_hook.sh`,
@@ -342,6 +385,7 @@ plug on the same trusted LAN.
 | scan_ranges | (unset) | optional per-band `{band: (start, end)}` sweep limit |
 | host / port | 0.0.0.0 / 8080 | LAN-reachable web server |
 | alert_cmd | (path) | siren hook to run on CRIT; empty disables the hook |
+| log_enabled | false | write `logs/` files (same as `--log`) |
 
 `RADIOS` is a list; the app spawns one worker per enabled radio. It ships with
 one USRP B210 enabled and a LibreSDR entry disabled (enable both, with distinct
@@ -390,6 +434,7 @@ SIB1 stage-2 decode on the roadmap.
 | `static/bts.html` | dashboard |
 | `bts_config.py` | per-box profile: engine, radios, tunables |
 | `siren_hook.sh`, `Tplinkcomprehensivescript.py` | optional smart-plug siren |
+| `logs/` | created by `--log`: daily cell_search and anomaly logs (git-ignored) |
 
 ---
 

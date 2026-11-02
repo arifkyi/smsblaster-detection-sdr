@@ -20,6 +20,7 @@ Endpoints:
   POST /clear_inject     sim-only: remove injected fake BTS
 """
 
+import argparse
 import json
 import os
 import time
@@ -35,6 +36,14 @@ try:
     RADIOS = list(_cfgmod.RADIOS)
 except Exception:
     CONFIG, RADIOS = {}, [{"name": "sim", "serial": None, "enabled": True}]
+
+# Command line: `python bts_app.py --log` turns on the log files (logs/).
+_ap = argparse.ArgumentParser(description="SMS Blaster Detector web app")
+_ap.add_argument("--log", action="store_true",
+                 help="write logs/cellsearch_DATE.log and logs/anomalies_DATE.log")
+_args, _ = _ap.parse_known_args()
+if _args.log:
+    CONFIG["log_enabled"] = True
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__, static_folder=None)
@@ -166,6 +175,7 @@ def stream():
 if __name__ == "__main__":
     host = CONFIG.get("host", "0.0.0.0")
     port = int(CONFIG.get("port", 8080))
-    print("SMS-blaster detector on http://%s:%d  (engine=%s)" % (
-        host, port, engine.cfg["engine"]))
+    print("SMS-blaster detector on http://%s:%d  (engine=%s, log %s)" % (
+        host, port, engine.cfg["engine"],
+        ("on -> " + engine.log.folder) if engine.log.enabled else "off"))
     app.run(host=host, port=port, threaded=True, debug=False)

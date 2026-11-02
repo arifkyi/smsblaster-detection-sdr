@@ -169,6 +169,7 @@
       <span class="chip">gain <b id="c-gain">–</b> dB</span>
       <span class="chip">mode <b id="c-mode">idle</b></span>
       <span class="chip">cycle <b id="c-cycle">0</b></span>
+      <span class="chip" id="c-log" style="display:none">log <b>on</b></span>
     </div>
   </header>
 
@@ -266,14 +267,15 @@
         <div class="sim-only" id="siminject" style="display:none">
           <span class="ctl-label">Sim test · inject fake BTS</span>
           <div class="form-row" style="padding:8px 0 0;border:0">
-            <div class="field"><label>Band</label><input id="i-band" type="number" value="8"></div>
-            <div class="field"><label>EARFCN</label><input id="i-earfcn" type="number" value="3600"></div>
-            <div class="field"><label>PCI</label><input id="i-phyid" type="number" value="99"></div>
-            <div class="field"><label>PRB</label><input id="i-prb" type="number" value="6"></div>
+            <div class="field"><label>Band</label><input id="i-band" type="number" value="3"></div>
+            <div class="field"><label>EARFCN</label><input id="i-earfcn" type="number" value="1700"></div>
+            <div class="field"><label>PCI</label><input id="i-phyid" type="number" value="1"></div>
+            <div class="field"><label>PRB</label><input id="i-prb" type="number" value="50"></div>
             <div class="field"><label>dBm</label><input id="i-dbm" type="number" value="-20"></div>
             <button class="mini" id="btn-inject">Inject</button>
             <button class="mini" id="btn-clearinject">Clear</button>
           </div>
+          <div class="ctl-label" id="inj-active" style="margin-top:8px">Active fakes: none</div>
         </div>
       </div>
     </div>
@@ -338,6 +340,11 @@ function render(st){
   const stx=$('#status'); stx.textContent=st.status||'';
   stx.classList.toggle('err',(st.status||'').startsWith('ERROR'));
   $('#siminject').style.display = st.engine==='sim'?'block':'none';
+  $('#c-log').style.display = st.log_enabled ? '' : 'none';
+  const inj = st.injections||[];
+  $('#inj-active').textContent = 'Active fakes: ' + (inj.length
+    ? inj.map(i=>'B'+i.band+' '+i.earfcn+' PCI '+i.phyid+' '+i.dbm+' dBm').join(', ')
+    : 'none');
 
   // siren toggle
   const sg=$('#siren');

@@ -53,6 +53,12 @@ CONFIG = {
     "discovery_enabled": True,
     "monitor_track_guard": 2,
 
+    # ---- logging ----------------------------------------------------------
+    # Write logs/cellsearch_DATE.log (every cell_search run and its cells) and
+    # logs/anomalies_DATE.log (alerts, acks, siren, errors). `python bts_app.py
+    # --log` turns it on for one run without editing this line.
+    "log_enabled": False,
+
     # ---- web --------------------------------------------------------------
     "host": "0.0.0.0",      # LAN-reachable: open http://<this box IP>:8080 from the Mac
     "port": 8080,

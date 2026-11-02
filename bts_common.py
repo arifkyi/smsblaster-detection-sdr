@@ -172,6 +172,9 @@ DEFAULTS = {
     "baseline_path": "baseline_cells.json",
     "sim_baseline_path": "baseline_sim.json",
 
+    # logging: off unless `--log` is given or this is True
+    "log_enabled": False,
+
     # web
     "host": "0.0.0.0",               # LAN-reachable; view from another device via box IP
     "port": 8080,
