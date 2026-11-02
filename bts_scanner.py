@@ -704,15 +704,30 @@ class Engine:
             by_band[bc.band].append(bc.earfcn)
         for (band, earfcn) in self._dynamic_tracks:
             by_band[band].append(earfcn)
+        # Neighbouring tracked EARFCNs are merged into one cluster, so one
+        # cell_search launch (one radio open) covers them all instead of one
+        # launch per EARFCN. Each EARFCN keeps the same +/- guard as before,
+        # so it is never at a window edge. Clusters are capped in width so a
+        # chain of nearby ghosts cannot grow one run without limit.
+        max_span = int(self.cfg.get("track_cluster_max", 12))
         windows = []
         for band, earfcns in by_band.items():
+            b = C.BANDS.get(band)
+            if not b:
+                continue
+            cluster = None   # [lo, hi]
             for ea in sorted(set(earfcns)):
-                b = C.BANDS.get(band)
-                if not b:
+                lo, hi = ea - guard, ea + guard
+                if cluster and lo <= cluster[1] and hi - cluster[0] <= max_span:
+                    cluster[1] = hi
                     continue
-                lo = max(b["earfcn_low"], ea - guard)
-                hi = min(b["earfcn_high"], ea + guard)
-                windows.append((band, lo, hi))
+                if cluster:
+                    windows.append((band, max(b["earfcn_low"], cluster[0]),
+                                    min(b["earfcn_high"], cluster[1])))
+                cluster = [lo, hi]
+            if cluster:
+                windows.append((band, max(b["earfcn_low"], cluster[0]),
+                                min(b["earfcn_high"], cluster[1])))
         return windows
 
     @staticmethod
@@ -852,6 +867,7 @@ class Engine:
                         # sighting of a blaster would block its CRIT and siren.
                         if sev == C.SEV_CRIT and old.severity != C.SEV_CRIT:
                             old.severity = C.SEV_CRIT
+                            old.first_ts = _now_iso()   # card age = time it went CRIT
                             fired_crit = True
                             self.log.event("%s %-7s EARFCN=%s PCI=%s PSS=%s  escalated from WARN: %s" % (
                                 sev, atype, old.earfcn, old.phyid,
