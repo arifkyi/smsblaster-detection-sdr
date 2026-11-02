@@ -58,7 +58,8 @@ CONFIG = {
     "port": 8080,
 
     # ---- baseline file ----------------------------------------------------
-    "baseline_path": "baseline_cells.json",
+    "baseline_path": "baseline_cells.json",       # used with engine "cell_search"
+    "sim_baseline_path": "baseline_sim.json",     # used with engine "sim" (kept separate)
 
     # ---- siren ------------------------------------------------------------
     # Point alert_cmd at your siren_hook.sh to enable the plug. Empty = no hook.

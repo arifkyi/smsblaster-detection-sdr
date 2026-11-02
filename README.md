@@ -135,6 +135,10 @@ you can exercise the whole pipeline and the UI with no radio. In sim mode the
 dashboard shows a **Sim test - inject fake BTS** panel to make a strong cell
 appear and watch it alarm.
 
+The sim keeps its own baseline in `baseline_sim.json`, separate from the
+real-hardware `baseline_cells.json`. Switching `engine` back and forth never
+mixes or overwrites them; learn once in each mode.
+
 ---
 
 ## Quick test (real hardware, cell_search)
@@ -333,6 +337,8 @@ plug on the same trusted LAN.
 | discovery_enabled | true | discovery sweep on/off (GUI toggle default); off = track scans only |
 | discovery_every_s | 1800 | seconds between full-band discovery sweeps; keep it longer than one sweep so track cycles stay fast |
 | monitor_track_guard | 2 | +/- EARFCN padding around each tracked cell |
+| baseline_path | baseline_cells.json | baseline file used with `engine: cell_search` |
+| sim_baseline_path | baseline_sim.json | baseline file used with `engine: sim` (kept separate) |
 | scan_ranges | (unset) | optional per-band `{band: (start, end)}` sweep limit |
 | host / port | 0.0.0.0 / 8080 | LAN-reachable web server |
 | alert_cmd | (path) | siren hook to run on CRIT; empty disables the hook |

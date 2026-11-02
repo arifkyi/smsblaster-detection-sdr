@@ -142,7 +142,7 @@ class SimSource(ScanSource):
 
     # a few stable truth cells per band (earfcn, phyid, prb, ports, base_dbm)
     TRUTH = {
-        3:  [(1313, 108, 100, 2, -36.0), (1850, 275, 100, 4, -41.0)],
+        3:  [(1275, 108, 100, 2, -36.0), (1700, 275, 100, 4, -41.0)],
         1:  [(74, 2, 15, 1, -27.0), (300, 150, 50, 2, -22.0)],
         8:  [],   # empty band (no cells)
         40: [(38752, 2, 25, 1, -17.0), (38843, 0, 100, 4, -26.0)],
@@ -317,7 +317,13 @@ class Engine:
         self.cfg = dict(C.DEFAULTS)
         self.cfg.update(cfg or {})
         self.radios = radios                      # list of radio dicts
-        self.baseline = Baseline(self.cfg.get("baseline_path", "baseline_cells.json"))
+        # The sim keeps its own baseline file, so a sim learn can never overwrite
+        # the real-hardware baseline. Switching engine is then a one-line change.
+        if self.cfg.get("engine") == "cell_search":
+            bpath = self.cfg.get("baseline_path", "baseline_cells.json")
+        else:
+            bpath = self.cfg.get("sim_baseline_path", "baseline_sim.json")
+        self.baseline = Baseline(bpath)
         self.baseline.load()
 
         self._lock = threading.Lock()

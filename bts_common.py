@@ -168,6 +168,10 @@ DEFAULTS = {
     "discovery_every_s": 300,        # full-band discovery sweep cadence (seconds)
     "monitor_track_guard": 2,        # +/- EARFCN padding around a tracked cell's window
 
+    # baseline files: real hardware and sim never share one
+    "baseline_path": "baseline_cells.json",
+    "sim_baseline_path": "baseline_sim.json",
+
     # web
     "host": "0.0.0.0",               # LAN-reachable; view from another device via box IP
     "port": 8080,
