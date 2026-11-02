@@ -84,6 +84,8 @@ class CellSearchSource(ScanSource):
         cwd = self.radio.get("cwd") or None
         cells = []
         in_summary = False
+        progressed = False
+        tail = deque(maxlen=6)          # last output lines, for the error text
         try:
             self._proc = subprocess.Popen(
                 args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -95,9 +97,13 @@ class CellSearchSource(ScanSource):
         for line in self._proc.stdout:
             if self._stop:
                 break
+            if line.strip():
+                tail.append(line.strip())
             prog = C.parse_progress(line)
-            if prog and on_progress:
-                on_progress(*prog)
+            if prog:
+                progressed = True
+                if on_progress:
+                    on_progress(*prog)
                 continue
             if C.parse_found_summary(line) is not None:
                 in_summary = True
@@ -117,6 +123,12 @@ class CellSearchSource(ScanSource):
         except Exception:
             self._proc.kill()
         self._proc = None
+        # cell_search printed no "[ n/N]: EARFCN ..." line at all: it never
+        # scanned (radio busy, unplugged, FPGA load failure). Raise instead of
+        # returning [], so a dead radio can never look like "all cells missing".
+        if not progressed and not self._stop:
+            raise RuntimeError("radio error, cell_search did not scan: %s"
+                               % (" | ".join(tail) or "no output"))
         return cells
 
     def stop(self):
@@ -370,6 +382,7 @@ class Engine:
 
     def _source_for(self, radio):
         src = make_source(radio, self.cfg)
+        self._active_src = src      # so Stop can terminate an in-flight scan
         if isinstance(src, SimSource):
             self._sim = src
             # re-apply any standing fake-BTS injections to the fresh source
@@ -386,9 +399,14 @@ class Engine:
 
     def stop(self):
         self._stopflag.set()
+        # Terminate the scan in flight. Without this a full-band sweep keeps
+        # running after Stop, holds the radio, and the next run's scans fail.
+        src = getattr(self, "_active_src", None)
+        if src is not None:
+            src.stop()
         w = self._worker
         if w and w.is_alive():
-            w.join(timeout=10)
+            w.join(timeout=15)
         self.mode = "idle"
         self.status_line = "stopped"
 
